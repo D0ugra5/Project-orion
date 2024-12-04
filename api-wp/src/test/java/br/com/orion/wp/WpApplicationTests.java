@@ -72,4 +72,28 @@ class ExceptionProcessorTest {
         verify(handler, never()).handleExceptions(any(), any());
         verify(message, never()).setBody(any());
     }
+
+    @Test
+void testProcessWithBusinessException() throws Exception {
+    // Simular BusinessException com apenas uma mensagem
+    BusinessException businessException = new BusinessException("Erro de validação");
+    when(exchange.getProperty(Exchange.EXCEPTION_CAUGHT, BusinessException.class)).thenReturn(businessException);
+
+    // Executar o processador
+    exceptionProcessor.process(exchange);
+
+    // Capturar o corpo configurado no Exchange
+    verify(message).setBody(any(ApiErrorResponseDTO.class));
+    ApiErrorResponseDTO responseDTO = message.getBody(ApiErrorResponseDTO.class);
+
+    // Validar o conteúdo do ApiErrorResponseDTO
+    assertEquals("Erro tratado", responseDTO.getMessage());
+    assertEquals(1, responseDTO.getErrors().size());
+
+    // Validar o único erro no ApiErrorResponseDTO
+    ErrorDetailDTO errorDetail = responseDTO.getErrors().get(0);
+    assertEquals("Erro de validação", errorDetail.getMessage());
+    assertEquals("ERROR", errorDetail.getLevel());
+    assertEquals("Erro de validação ocorrido no processamento", errorDetail.getDescription());
+}
 }
