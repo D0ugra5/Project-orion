@@ -96,4 +96,40 @@ void testProcessWithBusinessException() throws Exception {
     assertEquals("ERROR", errorDetail.getLevel());
     assertEquals("Erro de validação ocorrido no processamento", errorDetail.getDescription());
 }
+
+       @Test
+    void testProcessWithBusinessException() throws Exception {
+        // Simular BusinessException com apenas uma mensagem
+        BusinessException businessException = new BusinessException("Erro de validação");
+        when(exchange.getProperty(Exchange.EXCEPTION_CAUGHT, BusinessException.class)).thenReturn(businessException);
+
+        // Executar o processador
+        exceptionProcessor.process(exchange);
+
+        // Capturar o corpo configurado no Exchange
+        ApiErrorResponseDTO apiErrorResponseDTO = new ApiErrorResponseDTO();
+        ErrorDetailDTO errorDetailDTO = new ErrorDetailDTO("1","Teste","Erro","Erro");
+        apiErrorResponseDTO.setErrors(Arrays.asList(errorDetailDTO));
+        when(handler.handleExceptions((Exception) any(),any())).thenReturn(anyList());
+        when(handler.buildResponse(anyList())).thenReturn(apiErrorResponseDTO);
+
+
+        ApiErrorResponseDTO responseDTO = message.getBody(ApiErrorResponseDTO.class);
+
+        // Validar o conteúdo do ApiErrorResponseDTO
+        assertEquals(1, responseDTO.getErrors().size());
+
+        // Validar o único erro no ApiErrorResponseDTO
+        ErrorDetailDTO errorDetail = responseDTO.getErrors().get(0);
+        assertEquals("Erro de validação", errorDetail.getMessage());
+        assertEquals("ERROR", errorDetail.getLevel());
+        assertEquals("Erro de validação ocorrido no processamento", errorDetail.getDescription());
+    }
+
+    org.mockito.exceptions.misusing.InvalidUseOfMatchersException: 
+Invalid use of argument matchers!
+1 matchers expected, 2 recorded:
+-> at com.santander.chk_int.processor.error.ExceptionProcessorTest.testProcessWithBusinessException(ExceptionProcessorTest.java:61)
+-> at com.santander.chk_int.processor.error.ExceptionProcessorTest.testProcessWithBusinessException(ExceptionProcessorTest.java:62)
+
 }
