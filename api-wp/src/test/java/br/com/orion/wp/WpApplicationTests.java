@@ -1,100 +1,101 @@
-package com.santander.chk_int.utils;
-
-import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.Exchange;
+import org.apache.camel.Message;
 import org.aspectj.lang.JoinPoint;
-import org.aspectj.lang.annotation.AfterReturning;
-import org.aspectj.lang.annotation.AfterThrowing;
-import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Before;
-import org.joda.time.LocalDateTime;
-import org.springframework.stereotype.Component;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.slf4j.Logger;
 
-@Aspect
-@Component
-@Slf4j
-public class LoggingAspectUtils {
-  String xTraceId = "x-traceId";
-  
-  @Before("execution(* com.santander.chk_int.processor..*.*(..)) && args(exchange)")
-  public void logBeforeMethodExecution(JoinPoint joinPoint, Exchange exchange) {
-    
-    String logToShow = """
-        
-        ################
-        # Process started from class: {}
-        # Started at: {}
-        # trace-id: {}
-        # headers: {}
-        # body: {}
-        # query params: {}
-        # properties: {}
-        ################""";
-    
-    log.info(logToShow,
-             joinPoint.getSignature().getDeclaringTypeName(),
-             new LocalDateTime(),
-             exchange.getIn().getHeader(xTraceId),
-             exchange.getIn().getHeaders(),
-             exchange.getIn().getBody(Object.class),
-             exchange.getIn().getHeader(Exchange.HTTP_QUERY),
-             exchange.getProperties());
-  }
+import static org.mockito.Mockito.*;
 
-  @AfterReturning(pointcut = "execution(* com.santander.chk_int.processor..*.*(..)) && args(exchange)")
-  public void logAfter(JoinPoint joinPoint, Exchange exchange) {
+class LoggingAspectUtilsTest {
 
-    String logToShow = """
-        
-        ################
-        # Process finished successfully from class: {}
-        # Finished at: {}
-        # trace-id: {}
-        # headers: {}
-        # body: {}
-        # query params: {}
-        # properties: {}
-        ################""";
-    
-    log.info(logToShow,
-             joinPoint.getSignature().getDeclaringTypeName(),
-             new LocalDateTime(),
-             exchange.getIn().getHeader(xTraceId),
-             exchange.getIn().getHeaders(),
-             exchange.getIn().getBody(Object.class),
-             exchange.getIn().getHeader(Exchange.HTTP_QUERY),
-             exchange.getProperties());
-  }
+    private LoggingAspectUtils loggingAspectUtils;
 
+    @Mock
+    private Logger log;
 
-  @AfterThrowing(pointcut = "execution(* com.santander.chk_int.processor..*.*(..)) && args(exchange)", throwing = "exception")
-  public void logThrow(JoinPoint joinPoint, Exchange exchange, Throwable exception) {
+    @Mock
+    private JoinPoint joinPoint;
 
-    String logToShow = """
-        
-        ################
-        # Process throw exception from class: {}
-        # Finished at: {}
-        # trace-id: {}
-        # headers: {}
-        # body: {}
-        # query params: {}
-        # properties: {}
-        # EXCEPTION name: {}
-        # EXCEPTION message: {}
-        # EXCEPTION line number: {}
-        ################""";
-    
-    log.error(logToShow,
-              joinPoint.getSignature().getDeclaringTypeName(),
-              new LocalDateTime(),
-              exchange.getIn().getHeader(xTraceId),
-              exchange.getIn().getHeaders(),
-              exchange.getIn().getBody(Object.class),
-              exchange.getIn().getHeader(Exchange.HTTP_QUERY),
-              exchange.getProperties(),
-              exception.getClass().getName(),
-              exception.getMessage(),
-              exception.getStackTrace()[0].getLineNumber());
-  }
+    @Mock
+    private Exchange exchange;
+
+    @Mock
+    private Message message;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        loggingAspectUtils = new LoggingAspectUtils();
+        loggingAspectUtils.log = log;
+
+        // Mockando o comportamento do Exchange e Message
+        when(exchange.getIn()).thenReturn(message);
+        when(message.getHeader("x-traceId")).thenReturn("12345");
+        when(message.getHeaders()).thenReturn(Map.of("key", "value"));
+        when(message.getBody(Object.class)).thenReturn("Body Content");
+        when(message.getHeader(Exchange.HTTP_QUERY)).thenReturn("param=value");
+        when(exchange.getProperties()).thenReturn(Map.of("propertyKey", "propertyValue"));
+
+        // Mockando JoinPoint
+        when(joinPoint.getSignature().getDeclaringTypeName()).thenReturn("com.santander.chk_int.processor.SampleProcessor");
+    }
+
+    @Test
+    void testLogBeforeMethodExecution() {
+        // Executar o método
+        loggingAspectUtils.logBeforeMethodExecution(joinPoint, exchange);
+
+        // Verificar se o log foi chamado
+        verify(log).info(contains("Process started from class"), 
+                         eq("com.santander.chk_int.processor.SampleProcessor"),
+                         any(),
+                         eq("12345"),
+                         eq(Map.of("key", "value")),
+                         eq("Body Content"),
+                         eq("param=value"),
+                         eq(Map.of("propertyKey", "propertyValue")));
+    }
+
+    @Test
+    void testLogAfter() {
+        // Executar o método
+        loggingAspectUtils.logAfter(joinPoint, exchange);
+
+        // Verificar se o log foi chamado
+        verify(log).info(contains("Process finished successfully from class"),
+                         eq("com.santander.chk_int.processor.SampleProcessor"),
+                         any(),
+                         eq("12345"),
+                         eq(Map.of("key", "value")),
+                         eq("Body Content"),
+                         eq("param=value"),
+                         eq(Map.of("propertyKey", "propertyValue")));
+    }
+
+    @Test
+    void testLogThrow() {
+        // Criar uma exceção simulada
+        RuntimeException exception = new RuntimeException("Test exception");
+        StackTraceElement stackTraceElement = new StackTraceElement("ClassName", "methodName", "FileName.java", 42);
+        exception.setStackTrace(new StackTraceElement[]{stackTraceElement});
+
+        // Executar o método
+        loggingAspectUtils.logThrow(joinPoint, exchange, exception);
+
+        // Verificar se o log foi chamado
+        verify(log).error(contains("Process throw exception from class"),
+                          eq("com.santander.chk_int.processor.SampleProcessor"),
+                          any(),
+                          eq("12345"),
+                          eq(Map.of("key", "value")),
+                          eq("Body Content"),
+                          eq("param=value"),
+                          eq(Map.of("propertyKey", "propertyValue")),
+                          eq("java.lang.RuntimeException"),
+                          eq("Test exception"),
+                          eq(42));
+    }
 }
