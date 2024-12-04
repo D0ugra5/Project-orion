@@ -29,7 +29,6 @@ class LoggingAspectUtilsTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         loggingAspectUtils = new LoggingAspectUtils();
-        loggingAspectUtils.log = log;
 
         // Mockando o comportamento do Exchange e Message
         when(exchange.getIn()).thenReturn(message);
@@ -45,38 +44,50 @@ class LoggingAspectUtilsTest {
 
     @Test
     void testLogBeforeMethodExecution() {
+        // Mockando a chamada estática do logger
+        Logger staticLogger = mock(Logger.class);
+        LoggingAspectUtils.log = staticLogger;
+
         // Executar o método
         loggingAspectUtils.logBeforeMethodExecution(joinPoint, exchange);
 
         // Verificar se o log foi chamado
-        verify(log).info(contains("Process started from class"), 
-                         eq("com.santander.chk_int.processor.SampleProcessor"),
-                         any(),
-                         eq("12345"),
-                         eq(Map.of("key", "value")),
-                         eq("Body Content"),
-                         eq("param=value"),
-                         eq(Map.of("propertyKey", "propertyValue")));
+        verify(staticLogger).info(contains("Process started from class"),
+                eq("com.santander.chk_int.processor.SampleProcessor"),
+                any(),
+                eq("12345"),
+                eq(Map.of("key", "value")),
+                eq("Body Content"),
+                eq("param=value"),
+                eq(Map.of("propertyKey", "propertyValue")));
     }
 
     @Test
     void testLogAfter() {
+        // Mockando a chamada estática do logger
+        Logger staticLogger = mock(Logger.class);
+        LoggingAspectUtils.log = staticLogger;
+
         // Executar o método
         loggingAspectUtils.logAfter(joinPoint, exchange);
 
         // Verificar se o log foi chamado
-        verify(log).info(contains("Process finished successfully from class"),
-                         eq("com.santander.chk_int.processor.SampleProcessor"),
-                         any(),
-                         eq("12345"),
-                         eq(Map.of("key", "value")),
-                         eq("Body Content"),
-                         eq("param=value"),
-                         eq(Map.of("propertyKey", "propertyValue")));
+        verify(staticLogger).info(contains("Process finished successfully from class"),
+                eq("com.santander.chk_int.processor.SampleProcessor"),
+                any(),
+                eq("12345"),
+                eq(Map.of("key", "value")),
+                eq("Body Content"),
+                eq("param=value"),
+                eq(Map.of("propertyKey", "propertyValue")));
     }
 
     @Test
     void testLogThrow() {
+        // Mockando a chamada estática do logger
+        Logger staticLogger = mock(Logger.class);
+        LoggingAspectUtils.log = staticLogger;
+
         // Criar uma exceção simulada
         RuntimeException exception = new RuntimeException("Test exception");
         StackTraceElement stackTraceElement = new StackTraceElement("ClassName", "methodName", "FileName.java", 42);
@@ -86,16 +97,16 @@ class LoggingAspectUtilsTest {
         loggingAspectUtils.logThrow(joinPoint, exchange, exception);
 
         // Verificar se o log foi chamado
-        verify(log).error(contains("Process throw exception from class"),
-                          eq("com.santander.chk_int.processor.SampleProcessor"),
-                          any(),
-                          eq("12345"),
-                          eq(Map.of("key", "value")),
-                          eq("Body Content"),
-                          eq("param=value"),
-                          eq(Map.of("propertyKey", "propertyValue")),
-                          eq("java.lang.RuntimeException"),
-                          eq("Test exception"),
-                          eq(42));
+        verify(staticLogger).error(contains("Process throw exception from class"),
+                eq("com.santander.chk_int.processor.SampleProcessor"),
+                any(),
+                eq("12345"),
+                eq(Map.of("key", "value")),
+                eq("Body Content"),
+                eq("param=value"),
+                eq(Map.of("propertyKey", "propertyValue")),
+                eq("java.lang.RuntimeException"),
+                eq("Test exception"),
+                eq(42));
     }
 }
